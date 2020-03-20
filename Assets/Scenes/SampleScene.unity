@@ -340,7 +340,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d3fe7c499b63684f8bce9b675cf1dfc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerSpeed: 5
+  playerSpeed: 8
+  friction: 20
 --- !u!1 &2072803987
 GameObject:
   m_ObjectHideFlags: 0
@@ -375,7 +376,8 @@ EdgeCollider2D:
   m_Offset: {x: 0, y: 0}
   m_EdgeRadius: 0
   m_Points:
-  - {x: -1.2869687, y: 2.009639}
+  - {x: 1.2723408, y: 2.0208583}
+  - {x: -1.3496342, y: 2.045818}
   - {x: -1.3040655, y: -0.06504263}
   - {x: -1.260114, y: 0.09762106}
   - {x: -1.2202309, y: 0.13543333}
