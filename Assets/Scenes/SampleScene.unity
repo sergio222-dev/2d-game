@@ -220,7 +220,7 @@ GameObject:
   - component: {fileID: 1057565663}
   - component: {fileID: 1057565667}
   m_Layer: 0
-  m_Name: New Sprite (1)
+  m_Name: Golemmm
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -322,7 +322,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1057565662}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.95, y: 1.71, z: -5.8230033}
+  m_LocalPosition: {x: -5.28, y: -1.15, z: -5.8230033}
   m_LocalScale: {x: 0.444, y: 0.533, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -354,7 +354,7 @@ GameObject:
   - component: {fileID: 2072803989}
   - component: {fileID: 2072803988}
   m_Layer: 0
-  m_Name: New Sprite
+  m_Name: Piso
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

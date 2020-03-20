@@ -5,13 +5,15 @@ namespace Chara
     public class Movements : MonoBehaviour
     {
         public float playerSpeed;
+        public float friction;
         private Rigidbody2D _rb2d;
-        public float friction; 
+        private SpriteRenderer _spriteRenderer;
 
         // Start is called before the first frame update
         void Start()
         {
             _rb2d = GetComponent<Rigidbody2D>();
+            _spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
         // Update is called once per frame
@@ -21,11 +23,13 @@ namespace Chara
 
             if (Input.GetKey(KeyCode.D))
             {
+                _spriteRenderer.flipX = false;
                 _rb2d.AddForce(new Vector2(playerSpeed,0));
             }
             if (Input.GetKey(KeyCode.A))
             {
                 _rb2d.AddForce(new Vector2(-playerSpeed,0));
+                _spriteRenderer.flipX = true;
             }
             if (Input.GetKey(KeyCode.W))
             {
