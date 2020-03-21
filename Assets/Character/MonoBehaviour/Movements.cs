@@ -38,33 +38,6 @@ namespace Chara
                 Move(new Vector2(-playerSpeed, 0) * Time.deltaTime);
                 _spriteRenderer.flipX = true;
             }
-            
-            // Deceleration();
-
-            // if (Input.GetKey(KeyCode.D))
-            // {
-            //     _spriteRenderer.flipX = false;
-            //     _rb2d.AddForce(new Vector2(playerSpeed,0));
-            // }
-            // if (Input.GetKey(KeyCode.A))
-            // {
-            //     _rb2d.AddForce(new Vector2(-playerSpeed,0));
-            //     _spriteRenderer.flipX = true;
-            // }
-            // if (Input.GetKey(KeyCode.W))
-            // {
-            //     _rb2d.AddForce(new Vector2(0,playerSpeed));
-            // }
-            //
-            // if (_rb2d.velocity.x > 5)
-            // {
-            //     _rb2d.velocity = new Vector2(5,_rb2d.velocity.y);
-            // }
-            //
-            // if (_rb2d.velocity.x < -5)
-            // {
-            //     _rb2d.velocity = new Vector2(-5, _rb2d.velocity.y);
-            // }
         }
 
         private void Deceleration()
