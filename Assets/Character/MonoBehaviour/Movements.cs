@@ -54,12 +54,10 @@ namespace Character
 
             if (hitInfo)
             {
-                Debug.Log("Toco el piso");
                 _isGrounded = true;
             }
             else
             {
-                Debug.Log("Estoy en el aire");
                 _isGrounded = false;
             }
             
@@ -68,7 +66,7 @@ namespace Character
                 _rb2d.AddForce(Vector2.up);
             }
             
-            Debug.DrawRay(transform.position - new Vector3(0, _spriteRenderer.bounds.extents.y + 0.01f, 0), Vector2.down * 0.1f, new Color(1f, 0.05f, 0.05f), 1f);
+            Debug.DrawRay(transform.position - new Vector3(0, _spriteRenderer.bounds.extents.y + 0.01f, 0), Vector2.down * 0.1f, new Color(1f, 0.05f, 0.05f), 0.4f);
         }
 
         // Update is called once per frame
