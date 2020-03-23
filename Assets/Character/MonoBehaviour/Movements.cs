@@ -3,135 +3,152 @@ using UnityEngine;
 
 namespace Character
 {
-    public class Movements : MonoBehaviour
+    public class Movements : UnityEngine.MonoBehaviour
     {
-        public float playerSpeed;
-        public float friction;
-        private Rigidbody2D _rb2d;
+        public float horizontalDisplacement = 0.1f;
+        public int gravity = 50;
+        public int gravityFactor = 4;
+        public int maxFallGravityMultiplier = 100;
+        public Camera cameraSelected;
+        public float dirDrawRay = 1f;
+
+        // Objects
+        private Rigidbody2D _rigidbody2D;
         private SpriteRenderer _spriteRenderer;
-        private Vector2 _xMovement; //next movement
+        private BoxCollider2D _box;
+        
+        // Accumulators
+        private Vector2 _velocity;
+        private Vector2 _fallingVelocity;
+        private Vector2 _direction;
+        private Vector2 _nextMovement = Vector2.zero;
         private Vector2 _prevPosition;
         private Vector2 _currentPosition;
-        public float gravity = 50f;
-        public float jumpForce;
         private bool _isGrounded;
-        private Animator _animator;
+        private float _cumulativeFallingSpeed;
+        private float _m_gravity;
+        private float _m_maxFallVelocity;
 
-        // Start is called before the first frame update
-        private void Awake()
+        public void Awake()
         {
-            _rb2d = GetComponent<Rigidbody2D>();
+            _isGrounded = false;
+            _m_gravity = Convert.ToSingle(gravity / Math.Pow(10, gravityFactor));
+            _m_maxFallVelocity = _m_gravity * maxFallGravityMultiplier;
 
-            var position = _rb2d.position;
-            _currentPosition = position;
-            _prevPosition = position;
+            _rigidbody2D = GetComponent<Rigidbody2D>();
+            _spriteRenderer = GetComponent<SpriteRenderer>();
+            _box = GetComponent<BoxCollider2D>();
+            
+            _currentPosition = _prevPosition = _rigidbody2D.position;
+            
         }
         
         void Start()
         {
-            _rb2d = GetComponent<Rigidbody2D>();
+            _rigidbody2D = GetComponent<Rigidbody2D>();
             _spriteRenderer = GetComponent<SpriteRenderer>();
             _isGrounded = true;
         }
 
-        // Se ejecuta 50 veces por segundo
-        void FixedUpdate()
-        {
-            float move = Input.GetAxis("Horizontal");
-
-            if (move < 0)
-            {
-                _spriteRenderer.flipX = true;
-            } else if (move > 0)
-            {
-                _spriteRenderer.flipX = false;
-            }
-            
-            _rb2d.velocity = new Vector2(playerSpeed * move, _rb2d.velocity.y);
-
-            RaycastHit2D hitInfo;
-            hitInfo = Physics2D.Raycast(transform.position - new Vector3(0, _spriteRenderer.bounds.extents.y + 0.01f, 0), Vector2.down, 0.1f);
-
-            if (hitInfo)
-            {
-                _isGrounded = true;
-            }
-            else
-            {
-                _isGrounded = false;
-            }
-            
-            if (Input.GetKey(KeyCode.Space) && _isGrounded)
-            {
-                _rb2d.AddForce(Vector2.up);
-            }
-            
-            Debug.DrawRay(transform.position - new Vector3(0, _spriteRenderer.bounds.extents.y + 0.01f, 0), Vector2.down * 0.1f, new Color(1f, 0.05f, 0.05f), 0.4f);
-        }
-
-        // Update is called once per frame
-        void Update()
+        public void Update()
         {
             if (Input.GetKey(KeyCode.D))
             {
-                Move(new Vector2(playerSpeed, 0) * Time.deltaTime);
+                Move(new Vector2(horizontalDisplacement, 0));
+                _spriteRenderer.flipX = false;
             }
             
             if (Input.GetKey(KeyCode.A))
             {
-                Move(new Vector2(-playerSpeed, 0) * Time.deltaTime);
+                Move(new Vector2(-horizontalDisplacement, 0));
+                _spriteRenderer.flipX = true;
             }
 
-            if (Input.GetKey(KeyCode.Space))
+            if (Input.GetKey(KeyCode.Mouse1))
             {
-                Jump();
+                var mousePosition = Input.mousePosition;
+                var worldPosition = cameraSelected.ScreenToWorldPoint(mousePosition);
+                _rigidbody2D.position = worldPosition;
+                ResetGravity();
+                _isGrounded = false;
             }
-        }
-
-        private void Jump()
-        {
-            _rb2d.velocity = Vector2.up;
-            _rb2d.AddForce(Vector2.up);
-        }
-
-        private void OnCollisionEnter2D(Collision2D other)
-        {
-            if (other.gameObject.CompareTag("Ground"))
+            
+            if (Input.GetKey(KeyCode.Mouse0))
             {
-                _rb2d.velocity = Vector2.zero;
+                var mousePosition = Input.mousePosition;
+                var worldPosition = cameraSelected.ScreenToWorldPoint(mousePosition);
+                _rigidbody2D.position = worldPosition;
             }
         }
 
-        private void Deceleration()
+        // Se ejecuta 50 veces por segundo
+        public void FixedUpdate()
         {
-            var deceleration = 0f;
+            Falling();
+            DetectGround();
+            if (_isGrounded) _nextMovement = Vector2.zero;
+            _prevPosition = _rigidbody2D.position;
+            _currentPosition = _prevPosition + _nextMovement;
 
-            if (_rb2d.velocity.x > 0)
+            _rigidbody2D.MovePosition(_currentPosition);
+            _nextMovement = Vector2.zero;
+        }
+
+        private void ResetGravity()
+        {
+            _m_gravity = Convert.ToSingle(gravity / Math.Pow(10, gravityFactor));
+            _m_maxFallVelocity = _m_gravity * maxFallGravityMultiplier;
+            _cumulativeFallingSpeed = 0;
+        }
+
+        private void Falling()
+        {
+            // Vemos is estamos parado en el suelo
+            if (_isGrounded) return;
+            
+            // sumamos a la velocidad de caida acumulativa y nos fijamos que no sea mayor a la permitida
+            if (! ((_cumulativeFallingSpeed + _m_gravity) > _m_maxFallVelocity))
             {
-                deceleration = _rb2d.velocity.x - (friction * Time.deltaTime);
-                if (deceleration < 0)
-                {
-                    deceleration = 0;
-                }
-
-                _rb2d.velocity = new Vector2(deceleration, _rb2d.velocity.y);
+                _cumulativeFallingSpeed += _m_gravity;
             }
+            
+            _fallingVelocity = new Vector2(0, -_cumulativeFallingSpeed);
+            
+            Move(_fallingVelocity);
+        }
 
-            if (_rb2d.velocity.x < 0)
+        private void DetectGround()
+        {
+            // border cast ray
+            var ray1 = _rigidbody2D.position + _box.offset;
+            ray1.y -= _box.bounds.extents.y;
+            
+            Debug.DrawRay(ray1, _nextMovement, Color.red);
+            var hit = Physics2D.Raycast(
+                ray1,
+                _nextMovement,
+                _nextMovement.y, 
+                LayerMask.GetMask("Ground")
+                );
+            
+            // La reposicion del personaje por el choque contra un ground deberia estar encapsulada en otra parte
+            
+            if (hit.collider)
             {
-                deceleration = _rb2d.velocity.x + (friction * Time.deltaTime);
-                if (deceleration > 0)
-                {
-                    deceleration = 0;
-                }
-
-                _rb2d.velocity = new Vector2(deceleration, _rb2d.velocity.y);
+                Debug.Log(_nextMovement);
+                _isGrounded = true;
+                var _point = hit.point;
+                // Busca poner el rigid body sobre el punto de colision
+                _point.y += _box.bounds.extents.y;
+                // Busca centrar el frame de manera horizontal
+                _point.x -= _box.offset.x;
+                _rigidbody2D.position = _point;
             }
         }
 
         private void Move(Vector2 movement)
         {
-            _xMovement += movement;
+            _nextMovement += movement;
         }
     }
 }
