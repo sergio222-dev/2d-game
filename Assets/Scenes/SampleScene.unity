@@ -226,8 +226,8 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!70 &1057565663
-CapsuleCollider2D:
+--- !u!61 &1057565663
+BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -239,9 +239,19 @@ CapsuleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: -0.000002886261, y: -0.8875294}
-  m_Size: {x: 2.1905599, y: 2.2919078}
-  m_Direction: 0
+  m_Offset: {x: 0.12606561, y: -0.5106118}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 7.2, y: 4.8}
+    newSize: {x: 7.2, y: 4.8}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 2.1447728, y: 3.4325175}
+  m_EdgeRadius: 0
 --- !u!50 &1057565664
 Rigidbody2D:
   serializedVersion: 4
@@ -250,14 +260,14 @@ Rigidbody2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1057565662}
-  m_BodyType: 0
+  m_BodyType: 1
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 1
   m_LinearDrag: 0
   m_AngularDrag: 0.05
-  m_GravityScale: 1
+  m_GravityScale: 3
   m_Material: {fileID: 0}
   m_Interpolate: 0
   m_SleepingMode: 1
@@ -322,7 +332,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1057565662}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.28, y: -1.15, z: -5.8230033}
+  m_LocalPosition: {x: -5.468, y: -0.85, z: -5.8230033}
   m_LocalScale: {x: 0.444, y: 0.533, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -340,8 +350,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d3fe7c499b63684f8bce9b675cf1dfc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerSpeed: 8
-  friction: 20
+  horizontalDisplacement: 0.1
+  gravity: 50
+  gravityFactor: 4
+  maxFallGravityMultiplier: 100
+  cameraSelected: {fileID: 519420031}
+  dirDrawRay: 1
 --- !u!1 &2072803987
 GameObject:
   m_ObjectHideFlags: 0
@@ -353,9 +367,9 @@ GameObject:
   - component: {fileID: 2072803990}
   - component: {fileID: 2072803989}
   - component: {fileID: 2072803988}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Piso
-  m_TagString: Untagged
+  m_TagString: Ground
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -376,19 +390,8 @@ EdgeCollider2D:
   m_Offset: {x: 0, y: 0}
   m_EdgeRadius: 0
   m_Points:
-  - {x: 1.2723408, y: 2.0208583}
-  - {x: -1.3496342, y: 2.045818}
-  - {x: -1.3040655, y: -0.06504263}
-  - {x: -1.260114, y: 0.09762106}
-  - {x: -1.2202309, y: 0.13543333}
-  - {x: -0.97689646, y: 0.14704509}
-  - {x: -0.102141716, y: 0.17995627}
-  - {x: 0.47637278, y: 0.25581166}
-  - {x: 0.887332, y: 0.30164066}
-  - {x: 1.0644273, y: 0.27369496}
-  - {x: 1.1668662, y: 0.26226917}
-  - {x: 1.2894946, y: 0.2219839}
-  - {x: 1.2843097, y: 2.0147178}
+  - {x: -1.3735206, y: 0.19623303}
+  - {x: 1.3196468, y: 0.1962195}
   m_AdjacentStartPoint: {x: 0, y: 0}
   m_AdjacentEndPoint: {x: 0, y: 0}
   m_UseAdjacentStartPoint: 0
@@ -452,8 +455,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2072803987}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.37, y: -2.74, z: -5.5246334}
-  m_LocalScale: {x: 4.827, y: 3.771, z: 1}
+  m_LocalPosition: {x: -0.13, y: -3.33, z: -5.5246334}
+  m_LocalScale: {x: 5.319354, y: 3.2015789, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1
