@@ -33,26 +33,28 @@ namespace Character
         private float _cumulativeFallingSpeed;
         private float _m_gravity;
         private float _m_maxFallVelocity;
+        private ContactFilter2D _filter;
 
         public void Awake()
         {
-            _isGrounded = false;
-            _m_gravity = Convert.ToSingle(gravity / Math.Pow(10, gravityFactor));
-            _m_maxFallVelocity = _m_gravity * maxFallGravityMultiplier;
 
-            _rigidbody2D = GetComponent<Rigidbody2D>();
-            _spriteRenderer = GetComponent<SpriteRenderer>();
-            _box = GetComponent<BoxCollider2D>();
-            
-            _currentPosition = _prevPosition = _rigidbody2D.position;
             
         }
         
         void Start()
         {
+            
             _rigidbody2D = GetComponent<Rigidbody2D>();
             _spriteRenderer = GetComponent<SpriteRenderer>();
-            _isGrounded = true;
+            _box = GetComponent<BoxCollider2D>();
+
+            _isGrounded = false;
+            _m_gravity = Convert.ToSingle(gravity / Math.Pow(10, gravityFactor));
+            _m_maxFallVelocity = _m_gravity * maxFallGravityMultiplier;
+
+            _filter = new ContactFilter2D {layerMask = LayerMask.GetMask("Ground"), useLayerMask = true};
+
+            _currentPosition = _prevPosition = _rigidbody2D.position;
         }
 
         public void Update()
@@ -90,22 +92,19 @@ namespace Character
         // Se ejecuta 50 veces por segundo
         public void FixedUpdate()
         {
-            // Ver si el personaje esta el suelo
-            _isGrounded = IsGround(groundDetectDistance);
-            
-            // Si no esta en el suelo, este empezara a caer
+            CheckIfTouchTheGround();
             if (!_isGrounded)
             {
-                // Falling solo agrega la velocidad de caida al movimiento del personaje
-                Falling();
-                DetectCollisionWithGround();
+                AccelerationByFalling();
             }
             
             _prevPosition = _rigidbody2D.position;
             _currentPosition = _prevPosition + _nextMovement;
+            
+            if (!_isGrounded) CheckAndFixIfCollisionWithGround();
+            
             _rigidbody2D.MovePosition(_currentPosition);
             _nextMovement = Vector2.zero;
-            
         }
 
         private void ResetGravity()
@@ -114,86 +113,6 @@ namespace Character
             _m_maxFallVelocity = _m_gravity * maxFallGravityMultiplier;
             _cumulativeFallingSpeed = 0;
         }
-
-        /**
-         * Agrega velocidad al movimiento del personaje
-         */
-        private void Falling()
-        {
-            // sumamos a la velocidad de caida acumulativa y nos fijamos que no sea mayor a la permitida
-            if (! ((_cumulativeFallingSpeed + _m_gravity) > _m_maxFallVelocity))
-            {
-                _cumulativeFallingSpeed += _m_gravity;
-            }
-            
-            _fallingVelocity = new Vector2(0, -_cumulativeFallingSpeed);
-            
-            Move(_fallingVelocity);
-        }
-
-        private void DetectCollisionWithGround()
-        {
-            var isCollision = IsGround(_nextMovement.y);
-            // si no hubo colision salir del bucle
-            if (!isCollision) return;
-            
-            // si hubo colision reposicionar al personaje sobre el suelo
-            var point = CalculateMostYPoint(_hitsBuffer);
-            
-            // reposicionamiento
-            Debug.Log("Point: " + point);
-            var localScale = transform.localScale;
-            point += _box.size.y * localScale.y * 0.5f * Vector2.up;
-
-            var positionX = _rigidbody2D.position.x;
-            var positionY = point.y + _box.offset.y * localScale.y + groundDetectDistance;
-            Debug.Log("Posicion nueva X: " + positionX);
-            Debug.Log("Posicion nueva Y: " + positionY);
-            var newPosition = new Vector2(positionX, positionY);
-            _rigidbody2D.MovePosition(newPosition);
-            _nextMovement.y = 0f;
-            ResetGravity();
-
-        }
-
-//        private void DetectGround()
-//        {
-//            if (_isGrounded) return;
-//            
-//            //calcular el origen de los tres rayos
-//            var origins = CalculateOriginRay();
-//            
-//            foreach (var origin in origins)
-//            {
-//                Debug.DrawRay(
-//                    origin,
-//                    _nextMovement,
-//                    Color.red);
-//                
-//                
-//                var hit = Physics2D.Raycast(
-//                    origin,
-//                    Vector2.down,
-//                    _nextMovement.y,
-//                    LayerMask.GetMask("Ground")
-//                );
-//
-//                if (!hit.collider) continue;
-//                _isGrounded = true;
-//                var point = hit.point;
-//                Debug.Log("Punto de choque " + point);
-//                // Busca poner el rigid body sobre el punto de colision
-//                var localScale = transform.localScale;
-//                point += _box.size.y * localScale.y * 0.5f * Vector2.up;
-//               
-//                Debug.Log("Punto corregido " + point);
-//                _rigidbody2D.position = new Vector2(_rigidbody2D.position.x , point.y - _box.offset.y * localScale.y );
-//                Debug.Log("Nueva posicion " + _rigidbody2D.position);
-//                _nextMovement.y = 0f;
-//                break;
-//
-//            }
-//        }
 
         /**
          * Calcula los origenes de los 3 rayos desde abajo del personaje
@@ -208,7 +127,7 @@ namespace Character
             var scale = transform.localScale;
 
             //calcular el origen de los tres rayos
-            var position = _rigidbody2D.position;
+            var position = _currentPosition;
             var offset = _box.offset;
             var rayCastOrigin = position + (offset * scale);
             var rayCastFromBottom = rayCastOrigin + size.y * 0.5f * scale.y  * Vector2.down;
@@ -219,45 +138,69 @@ namespace Character
 
             return originArray;
         }
-        
-        /**
-         * Castea los rayos desde abajo a una distancia fijada y un layer dado
-         */
-        private RaycastHit2D[] CastRaysFromBottom(float distance, LayerMask layer)
+
+        private void CheckIfTouchTheGround()
         {
-            var rayHits = new RaycastHit2D[3];
             var rayOrigins = CalculateOriginRayFromBottom();
-            for (var i = 0; i < rayHits.Length ; i++)
+            var distanceRay = groundDetectDistance * 2f;
+            var count = 0;
+            foreach (var t in rayOrigins)
             {
-                Debug.DrawRay(rayOrigins[i], _nextMovement, Color.red);
-                var hit = Physics2D.Raycast(rayOrigins[i], Vector2.down, distance, layer);
-                rayHits[i] = hit;
+                count += Physics2D.Raycast(t, Vector2.down, _filter, _hitsBuffer, distanceRay);
             }
 
-            return rayHits;
+            _isGrounded = (count > 0);
+            if (_isGrounded)
+            {
+                _nextMovement.y = 0f;
+                ResetGravity();
+            }
         }
 
-        /**
-         * Detecta si el personaje esta tocando el suelo en sus 3 rayos desde la base.
-         */
-        private bool IsGround(float distance)
+        private void CheckAndFixIfCollisionWithGround()
         {
-            var hits = CastRaysFromBottom(distance, LayerMask.GetMask("Ground"));
-            // Guarda los hits en un buffer
-            _hitsBuffer = hits;
-            return hits.Aggregate(false, (acc, hit) =>
+            var rayOrigins = CalculateOriginRayFromBottom();
+            var distanceRay = _nextMovement.y;
+            
+            var count = 0;
+            for (var i = 0; i < rayOrigins.Length; i++)
             {
-                var isHit = hit.collider != null;
-                return (acc || isHit);
-            });
+                count += Physics2D.Raycast(rayOrigins[i], Vector2.down, _filter, _hitsBuffer, distanceRay);
+            }
+
+            if (count == 0) return;
+
+            // si hubo colision reposicionar al personaje sobre el suelo
+            var point = CalculateMostYPoint(_hitsBuffer);
+
+            // reposicionamiento
+            var localScale = transform.localScale;
+            point += _box.size.y * localScale.y * 0.5f * Vector2.up;
+            var positionX = _currentPosition.x;
+            var positionY = point.y + _box.offset.y * localScale.y + groundDetectDistance;
+            var newPosition = new Vector2(positionX, positionY);
+            _currentPosition = newPosition;
+            ResetGravity();
+        }
+
+        private void AccelerationByFalling()
+        {
+            // sumamos a la velocidad de caida acumulativa y nos fijamos que no sea mayor a la permitida
+            if (! ((_cumulativeFallingSpeed + _m_gravity) > _m_maxFallVelocity))
+            {
+                _cumulativeFallingSpeed += _m_gravity;
+            }
+            
+            _fallingVelocity = new Vector2(0, -_cumulativeFallingSpeed);
+            
+            Move(_fallingVelocity);
         }
 
         private Vector2 CalculateMostYPoint(RaycastHit2D[] hits)
         {
-            return hits.Aggregate(new Vector2(0, -Mathf.Infinity), (acc, hit) =>
-            {
-                return acc.y > hit.point.y ? acc : hit.point;
-            });
+            var hitsFiltered = hits.Where((h => h.collider != null));
+            var hitReduced = hitsFiltered.Aggregate((acc, hit) => acc.point.y > hit.point.y ? acc : hit);
+            return hitReduced.point;
         }
 
         private void Move(Vector2 movement)
