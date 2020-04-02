@@ -6,53 +6,83 @@ using UnityEngine.SocialPlatforms;
 
 namespace Character
 {
+    [AddComponentMenu("Fisicas/Fisicas del personaje")]
     public class Movements : UnityEngine.MonoBehaviour
     {
+        public Camera cameraSelected;
+
         public float horizontalDisplacement = 0.1f;
+        public float groundDetectDistance = 0.1f;
         public int gravity = 50;
         public int gravityFactor = 4;
         public int maxFallGravityMultiplier = 100;
-        public Camera cameraSelected;
-        public float dirDrawRay = 1f;
+
         public bool debugRayGround = false;
         public bool debugRayFalling = false;
-        [FormerlySerializedAs("GroundDetectDistance")] public float groundDetectDistance = 0.1f;
 
         // Objects
         private Rigidbody2D _rigidbody2D;
         private SpriteRenderer _spriteRenderer;
         private BoxCollider2D _box;
-        
+
         // Accumulators
         private Vector2 _velocity;
         private Vector2 _fallingVelocity;
         private Vector2 _direction;
+
+        /**
+         * Movements Vectors
+         */
         private Vector2 _nextMovement = Vector2.zero;
         private Vector2 _prevPosition;
         private Vector2 _currentPosition;
-        private RaycastHit2D[] _hitsBuffer = new RaycastHit2D[3];
-        private bool _isGrounded;
+
+        /**
+         * Jump Vectors
+         */
+        public int jumpInitialForce = 100;
+
+        // Jump data
+        private float _mJumpInitialForce;
+        private float _cumulativeJumpSpeed;
+
+
+        private readonly RaycastHit2D[] _hitsBuffer = new RaycastHit2D[3];
         private float _cumulativeFallingSpeed;
-        private float _m_gravity;
-        private float _m_maxFallVelocity;
+        private float _mGravity;
+        private float _mMaxFallVelocity;
         private ContactFilter2D _filter;
 
-        public void Awake()
+        //Estados que determinan en que posicion esta el personaje
+        private enum States
         {
-
-            
+            Jump,
+            Ground,
+            Falling,
+            Unknown,
         }
-        
-        void Start()
+
+        private States _state = States.Ground;
+
+        private void Start()
         {
-            
             _rigidbody2D = GetComponent<Rigidbody2D>();
             _spriteRenderer = GetComponent<SpriteRenderer>();
             _box = GetComponent<BoxCollider2D>();
 
-            _isGrounded = false;
-            _m_gravity = Convert.ToSingle(gravity / Math.Pow(10, gravityFactor));
-            _m_maxFallVelocity = _m_gravity * maxFallGravityMultiplier;
+            /**
+             * Gravity calculations
+             */
+            _mGravity = Convert.ToSingle(gravity / Math.Pow(10, gravityFactor));
+            _mMaxFallVelocity = _mGravity * maxFallGravityMultiplier;
+
+
+            /**
+             * Jump calculations
+             */
+            // Tomamos el 1% del valor fijado y ese sera nuestra fuerca inicial
+            _mJumpInitialForce = jumpInitialForce * 0.01f;
+            _cumulativeJumpSpeed = _mJumpInitialForce;
 
             _filter = new ContactFilter2D {layerMask = LayerMask.GetMask("Ground"), useLayerMask = true};
 
@@ -66,11 +96,16 @@ namespace Character
                 Move(new Vector2(horizontalDisplacement * Time.deltaTime, 0));
                 _spriteRenderer.flipX = false;
             }
-            
+
             if (Input.GetKey(KeyCode.A))
             {
                 Move(new Vector2(-horizontalDisplacement * Time.deltaTime, 0));
                 _spriteRenderer.flipX = true;
+            }
+
+            if (Input.GetKeyDown(KeyCode.W) && _state == States.Ground)
+            {
+                _state = States.Jump;
             }
 
             if (Input.GetKey(KeyCode.Mouse1))
@@ -79,16 +114,16 @@ namespace Character
                 var worldPosition = cameraSelected.ScreenToWorldPoint(mousePosition);
                 _rigidbody2D.position = worldPosition;
                 ResetGravity();
-                _isGrounded = false;
+                ReconfigureJump();
+                _state = States.Ground;
             }
-            
+
             if (Input.GetKey(KeyCode.Mouse0))
             {
                 var mousePosition = Input.mousePosition;
                 var worldPosition = cameraSelected.ScreenToWorldPoint(mousePosition);
                 _rigidbody2D.position = worldPosition;
             }
-            
         }
 
         // Se ejecuta 50 veces por segundo
@@ -98,25 +133,28 @@ namespace Character
              * Se chequea que el personaje este en el suelo
              */
             CheckIfTouchTheGround();
-            if (!_isGrounded)
-            {
-                /**
-                 * Si el personaje no esta en el suelo se aplica una acceleracion horizontal al nextMovement (gravedad)
-                 */
-                AccelerationByFalling();
-            }
-            
+
+            /**
+             * Si el personaje esta saltando hacemos la fisica de salto
+             */
+            if (_state == States.Jump) JumpAction();
+ 
+            /**
+             * Si el personaje no esta en el suelo se aplica una acceleracion horizontal al nextMovement (gravedad)
+             */
+            if (_state == States.Falling) AccelerationByFalling();
+
             /**
              * Calculamos la nueva posicion en base a la actual y el next movement
              */
             _prevPosition = _rigidbody2D.position;
             _currentPosition = _prevPosition + _nextMovement;
-            
+
             /**
              * Si el personaje no sigue en el suelo se checkea si colisionara con un piso y se corrige su posicion(currentPosition)
              */
-            if (!_isGrounded) CheckAndFixIfCollisionWithGround();
-            
+            if (_state == States.Falling) CheckAndFixIfCollisionWithGround();
+
             /**
              * se actualiza la posicion del personaje
              */
@@ -127,14 +165,36 @@ namespace Character
             _nextMovement = Vector2.zero;
         }
 
+        // Este metodo aplica la fisica de salto al personaje
+        private void JumpAction()
+        {
+            _nextMovement += Vector2.up * _cumulativeJumpSpeed;
+            _cumulativeJumpSpeed -= _mGravity;
+            if (_cumulativeJumpSpeed < 0)
+            {
+                _cumulativeJumpSpeed = _mJumpInitialForce;
+                _state = States.Unknown;
+            }
+        }
+
         /**
          * Se encarga de reiniciar la aceleracion por gravedad la gravedad
          */
         private void ResetGravity()
         {
-            _m_gravity = Convert.ToSingle(gravity / Math.Pow(10, gravityFactor));
-            _m_maxFallVelocity = _m_gravity * maxFallGravityMultiplier;
+            _mGravity = Convert.ToSingle(gravity / Math.Pow(10, gravityFactor));
+            _mMaxFallVelocity = _mGravity * maxFallGravityMultiplier;
             _cumulativeFallingSpeed = 0;
+        }
+
+        private void ReconfigureJump()
+        {
+            /**
+            * Jump calculations
+            */
+            // Tomamos el 1% del valor fijado y ese sera nuestra fuerca inicial
+            _mJumpInitialForce = jumpInitialForce * 0.01f;
+            _cumulativeJumpSpeed = _mJumpInitialForce;
         }
 
         /**
@@ -158,12 +218,12 @@ namespace Character
              * usa el eje de ordenadas local al sprite)
              */
             var rayCastOrigin = position + (offset * scale);
-            
+
             /**
              * Se le suma la mita del tamaño de la caja de colisiones, se multiplica para el escalado y el Vector.down
              * es para que el resultado sea negativo (0,-1)
              */
-            var rayCastFromBottom = rayCastOrigin + size.y * 0.5f * scale.y  * Vector2.down;
+            var rayCastFromBottom = rayCastOrigin + size.y * 0.5f * scale.y * Vector2.down;
 
             originArray[0] = rayCastFromBottom + size.x * scale.x * 0.5f * Vector2.left;
             originArray[1] = rayCastFromBottom;
@@ -177,6 +237,9 @@ namespace Character
          */
         private void CheckIfTouchTheGround()
         {
+            // No queremos chequear si estamos en el piso si estamos saltando
+            if (_state == States.Jump) return;
+
             var rayOrigins = CalculateOriginRayFromBottom();
             // multiplicamos por 2 para que sea mas preciso la deteccion del suelo
             var distanceRay = groundDetectDistance * 2f;
@@ -193,8 +256,8 @@ namespace Character
 
             // En caso de haber al menos una colision se considera que esta en el suelo y se resetea la acceleracion
             // por gravedad
-            _isGrounded = (count > 0);
-            if (_isGrounded)
+            _state = (count > 0) ? States.Ground : States.Falling;
+            if (IsInGround())
             {
                 ResetGravity();
             }
@@ -208,11 +271,11 @@ namespace Character
         {
             var rayOrigins = CalculateOriginRayFromBottom();
             var distanceRay = _nextMovement.y;
-            
+
             var count = 0;
             for (var i = 0; i < rayOrigins.Length; i++)
             {
-                if(debugRayFalling) Debug.DrawRay(rayOrigins[i], Vector2.down * distanceRay, Color.yellow);
+                if (debugRayFalling) Debug.DrawRay(rayOrigins[i], Vector2.down * distanceRay, Color.yellow);
                 count += Physics2D.Raycast(rayOrigins[i], Vector2.down, _filter, _hitsBuffer, distanceRay);
             }
 
@@ -255,13 +318,13 @@ namespace Character
         private void AccelerationByFalling()
         {
             // sumamos a la velocidad de caida acumulativa y nos fijamos que no sea mayor a la permitida
-            if (! ((_cumulativeFallingSpeed + _m_gravity) > _m_maxFallVelocity))
+            if (!((_cumulativeFallingSpeed + _mGravity) > _mMaxFallVelocity))
             {
-                _cumulativeFallingSpeed += _m_gravity;
+                _cumulativeFallingSpeed += _mGravity;
             }
-            
+
             _fallingVelocity = new Vector2(0, -_cumulativeFallingSpeed);
-            
+
             Move(_fallingVelocity);
         }
 
@@ -281,6 +344,11 @@ namespace Character
         private void Move(Vector2 movement)
         {
             _nextMovement += movement;
+        }
+
+        private bool IsInGround()
+        {
+            return (_state == States.Ground);
         }
     }
 }
