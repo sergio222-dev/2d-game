@@ -239,7 +239,7 @@ BoxCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: -0.022615671, y: -1.8009584}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -250,7 +250,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1.6781349, y: 0.61024797}
   m_EdgeRadius: 0
 --- !u!50 &1057565664
 Rigidbody2D:
@@ -332,8 +332,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1057565662}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.665, y: 4.358, z: -5.8230033}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -6.363, y: 5.313, z: -5.8230033}
+  m_LocalScale: {x: 0.527615, y: 0.60215604, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 2
@@ -350,13 +350,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d3fe7c499b63684f8bce9b675cf1dfc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  horizontalDisplacement: 0.1
+  horizontalDisplacement: 5
   gravity: 100
   gravityFactor: 3
   maxFallGravityMultiplier: 6
   cameraSelected: {fileID: 519420031}
   dirDrawRay: 1
-  groundDetectDistance: 0.00000005
+  debugRayGround: 0
+  debugRayFalling: 0
+  groundDetectDistance: 0.05
 --- !u!1 &2072803987
 GameObject:
   m_ObjectHideFlags: 0
@@ -388,7 +390,7 @@ EdgeCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0.1}
+  m_Offset: {x: 0, y: 0.3}
   m_EdgeRadius: 0
   m_Points:
   - {x: -1.3999999, y: 0}
