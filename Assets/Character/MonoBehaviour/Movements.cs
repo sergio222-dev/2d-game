@@ -19,6 +19,7 @@ namespace Character
 
         public bool debugRayGround = false;
         public bool debugRayFalling = false;
+        public bool debugRayRun = false;
 
         // Objects
         private Rigidbody2D _rigidbody2D;
@@ -138,7 +139,7 @@ namespace Character
              * Si el personaje esta saltando hacemos la fisica de salto
              */
             if (_state == States.Jump) JumpAction();
- 
+
             /**
              * Si el personaje no esta en el suelo se aplica una acceleracion horizontal al nextMovement (gravedad)
              */
@@ -154,11 +155,17 @@ namespace Character
              * Si el personaje no sigue en el suelo se checkea si colisionara con un piso y se corrige su posicion(currentPosition)
              */
             if (_state == States.Falling) CheckAndFixIfCollisionWithGround();
+            
+            /**
+             * cheque si chocamos con una pared
+             */
+            CheckAndFixCollisionWithWall();
 
             /**
              * se actualiza la posicion del personaje
              */
             _rigidbody2D.MovePosition(_currentPosition);
+            
             /**
              * se borra la velocidad actual para recalcular en el siguiente frame
              */
@@ -200,7 +207,7 @@ namespace Character
         /**
          * Calcula los origenes de los 3 rayos desde la parte inferior de la caja de colisiones del personaje
          */
-        private Vector2[] CalculateOriginRayFromBottom()
+        private Vector2[] CalculateOriginRay(bool bottom = true)
         {
             // el tamaño del collider
             var size = _box.size;
@@ -219,15 +226,37 @@ namespace Character
              */
             var rayCastOrigin = position + (offset * scale);
 
-            /**
+            if (bottom)
+            {
+                /**
              * Se le suma la mita del tamaño de la caja de colisiones, se multiplica para el escalado y el Vector.down
              * es para que el resultado sea negativo (0,-1)
              */
-            var rayCastFromBottom = rayCastOrigin + size.y * 0.5f * scale.y * Vector2.down;
+                var rayCastFromBottom = rayCastOrigin + size.y * 0.5f * scale.y * Vector2.down;
 
-            originArray[0] = rayCastFromBottom + size.x * scale.x * 0.5f * Vector2.left;
-            originArray[1] = rayCastFromBottom;
-            originArray[2] = rayCastFromBottom + size.x * scale.x * 0.5f * Vector2.right;
+                originArray[0] = rayCastFromBottom + size.x * scale.x * 0.5f * Vector2.left;
+                originArray[1] = rayCastFromBottom;
+                originArray[2] = rayCastFromBottom + size.x * scale.x * 0.5f * Vector2.right;
+            }
+            else
+            {
+                if (_spriteRenderer.flipX)
+                {
+                    var rayCastFromLeft = rayCastOrigin + size.x * 0.5f * scale.x * Vector2.left;
+
+                    originArray[0] = rayCastFromLeft + size.y * scale.y * 0.5f * Vector2.up;
+                    originArray[1] = rayCastFromLeft;
+                    originArray[2] = rayCastFromLeft + size.y * scale.y * 0.5f * Vector2.down;
+                }
+                else
+                {
+                    var rayCastFromRight = rayCastOrigin + size.x * 0.5f * scale.x * Vector2.right;
+
+                    originArray[0] = rayCastFromRight + size.y * scale.y * 0.5f * Vector2.up;
+                    originArray[1] = rayCastFromRight;
+                    originArray[2] = rayCastFromRight + size.y * scale.y * 0.5f * Vector2.down;
+                }
+            }
 
             return originArray;
         }
@@ -240,7 +269,7 @@ namespace Character
             // No queremos chequear si estamos en el piso si estamos saltando
             if (_state == States.Jump) return;
 
-            var rayOrigins = CalculateOriginRayFromBottom();
+            var rayOrigins = CalculateOriginRay();
             // multiplicamos por 2 para que sea mas preciso la deteccion del suelo
             var distanceRay = groundDetectDistance * 2f;
             var count = 0;
@@ -269,7 +298,7 @@ namespace Character
          */
         private void CheckAndFixIfCollisionWithGround()
         {
-            var rayOrigins = CalculateOriginRayFromBottom();
+            var rayOrigins = CalculateOriginRay();
             var distanceRay = _nextMovement.y;
 
             var count = 0;
@@ -312,6 +341,43 @@ namespace Character
             ResetGravity();
         }
 
+        private void CheckAndFixCollisionWithWall()
+        {
+            // if (Math.Abs(_nextMovement.x) < 0.0001f) return;
+            var rayOrigins = CalculateOriginRay(false);
+            var distanceRay = Math.Abs(_nextMovement.x);
+            var dir = _spriteRenderer.flipX ? Vector2.right : Vector2.left;
+
+            var count = 0;
+            for (var i = 0; i < rayOrigins.Length; i++)
+            {
+                if (debugRayRun) Debug.DrawRay(rayOrigins[i], dir * distanceRay, Color.yellow);
+                count += Physics2D.Raycast(rayOrigins[i], dir, _filter, _hitsBuffer, distanceRay);
+            }
+
+            // En caso de no haber ninguna colision se saldra de este metodo y se continuara normalmente
+            if (count == 0) return;
+
+            // si hubo colision se busca la coordenada con la Y que este mas arriba para hubicar al personaje
+            var point = CalculateMostYPoint(_hitsBuffer);
+
+            // reposicionamiento
+            var localScale = transform.localScale;
+
+            point += _box.size.x * localScale.y * 0.5f * dir;
+            /**
+             * Se calculan las nuevas posiciones
+             */
+            var positionX = point.x - _box.offset.x * localScale.x;
+            var positionY = _currentPosition.y;
+            var newPosition = new Vector2(positionX, positionY);
+            /**
+             * Es importante que la nueva posicion sea asignara a _currentPosition ya que el esta se encarga de actualizar
+             * la posicion del rigidbody
+             */
+            _currentPosition = newPosition;
+        }
+
         /**
          * Ese metodo se encarga de acelerar verticalmente(hacia abajo) al personaje
          */
@@ -334,7 +400,7 @@ namespace Character
         private Vector2 CalculateMostYPoint(RaycastHit2D[] hits)
         {
             var hitsFiltered = hits.Where((h => h.collider != null));
-            var hitReduced = hitsFiltered.Aggregate((acc, hit) => acc.point.y > hit.point.y ? acc : hit);
+            var hitReduced = hitsFiltered.Aggregate((acc, hit) => acc.distance > hit.distance ? acc : hit);
             return hitReduced.point;
         }
 
