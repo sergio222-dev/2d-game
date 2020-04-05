@@ -341,6 +341,9 @@ namespace Character
             ResetGravity();
         }
 
+        /**
+         * Detecta la colision contra los muros
+         */
         private void CheckAndFixCollisionWithWall()
         {
             // if (Math.Abs(_nextMovement.x) < 0.0001f) return;
@@ -359,7 +362,7 @@ namespace Character
             if (count == 0) return;
 
             // si hubo colision se busca la coordenada con la Y que este mas arriba para hubicar al personaje
-            var point = CalculateMostYPoint(_hitsBuffer);
+            var point = _hitsBuffer[0].point;
 
             // reposicionamiento
             var localScale = transform.localScale;
